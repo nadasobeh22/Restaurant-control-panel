@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
 const Login = () => {
@@ -26,19 +26,18 @@ const Login = () => {
 
     try {
       const response = await axios.post(API_URL, { email, password }, {
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (response.data.status === 'success') {
         const token = response.data.data.authorization.token;
         localStorage.setItem('token', token);
-        navigate('/dashboard'); // التوجيه إلى Dashboard بعد النجاح
+        navigate('/dashboard');
       } else {
         setError(response.data.message || 'Invalid email or password.');
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Invalid email or password.';
-      setError(errorMessage);
+      setError(err.response?.data?.message || 'Invalid email or password.');
     } finally {
       setLoading(false);
     }
@@ -99,6 +98,14 @@ const Login = () => {
             )}
           </button>
         </form>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-indigo-600 hover:text-indigo-800 font-medium transition-all duration-200">
+              Register
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

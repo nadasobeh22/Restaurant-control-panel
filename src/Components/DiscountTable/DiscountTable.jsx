@@ -1,99 +1,93 @@
 import React from 'react';
 
-const DiscountTable = ({ type, data, onDelete, onEdit, onViewFoods, language = 'en' }) => {
+const DiscountTable = ({ type, data, onEdit, onDelete, onViewFoods }) => {
   return (
-    <div className="p-2 sm:p-4">
-      <div className="bg-gray-800 border border-gray-600 rounded-2xl shadow-lg w-full">
-        {data.length === 0 ? (
-          <div className="p-2 sm:p-3 text-center text-gray-400 text-xs sm:text-sm">
-            No discounts available
-          </div>
-        ) : (
-          <div className="grid gap-2 sm:table sm:w-full">
-            <div className="hidden sm:table-header-group bg-indigo-600 text-white">
-              <div className="sm:table-row">
-                <div className="sm:table-cell py-1 sm:py-2 px-2 text-left text-xs font-semibold">ID</div>
-                <div className="sm:table-cell py-1 sm:py-2 px-2 text-left text-xs font-semibold">Name</div>
+    <div className="overflow-x-auto rounded-lg shadow-lg">
+      <table className="w-full bg-gray-800 text-[8px] xs:text-[10px] sm:text-xs md:text-sm">
+        <thead className="bg-indigo-600 text-white">
+          <tr>
+            <th className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-0.5 xs:py-1 sm:py-1.5 md:py-2 text-left font-semibold">ID</th>
+            <th className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-0.5 xs:py-1 sm:py-1.5 md:py-2 text-left font-semibold">Name</th>
+            {type === 'code' && (
+              <th className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-0.5 xs:py-1 sm:py-1.5 md:py-2 text-left font-semibold">Code</th>
+            )}
+            <th className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-0.5 xs:py-1 sm:py-1.5 md:py-2 text-left font-semibold">Value</th>
+            <th className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-0.5 xs:py-1 sm:py-1.5 md:py-2 text-left font-semibold">Start</th>
+            <th className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-0.5 xs:py-1 sm:py-1.5 md:py-2 text-left font-semibold">End</th>
+            <th className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-0.5 xs:py-1 sm:py-1.5 md:py-2 text-left font-semibold">Status</th>
+            <th className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-0.5 xs:py-1 sm:py-1.5 md:py-2 text-left font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.length === 0 ? (
+            <tr>
+              <td
+                colSpan={type === 'code' ? 8 : 7}
+                className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3 text-center text-gray-400"
+              >
+                No discounts available
+              </td>
+            </tr>
+          ) : (
+            data.map((discount) => (
+              <tr
+                key={discount.id}
+                className="border-t border-gray-700 hover:bg-gray-700 transition-all duration-150"
+              >
+                <td className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3">{discount.id}</td>
+                <td className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3 max-w-[60px] xs:max-w-[80px] sm:max-w-[100px] md:max-w-[150px] truncate">
+                  {discount.name?.en || discount.name || 'N/A'}
+                </td>
                 {type === 'code' && (
-                  <div className="sm:table-cell py-1 sm:py-2 px-2 text-left text-xs font-semibold">Code</div>
+                  <td className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3">
+                    {discount.code || 'N/A'}
+                  </td>
                 )}
-                <div className="sm:table-cell py-1 sm:py-2 px-2 text-left text-xs font-semibold">Value</div>
-                <div className="sm:table-cell py-1 sm:py-2 px-2 text-left text-xs font-semibold">Start Date</div>
-                <div className="sm:table-cell py-1 sm:py-2 px-2 text-left text-xs font-semibold">End Date</div>
-                <div className="sm:table-cell py-1 sm:py-2 px-2 text-left text-xs font-semibold">Status</div>
-                <div className="sm:table-cell py-1 sm:py-2 px-2 text-left text-xs font-semibold">Actions</div>
-              </div>
-            </div>
-            <div className="grid gap-2 sm:table-row-group">
-              {data.map((discount) => (
-                <div
-                  key={discount.id}
-                  className="flex flex-col sm:table-row border-b border-gray-600 p-2 sm:p-0 hover:bg-gray-700 transition-colors duration-200"
-                >
-                  <div className="sm:table-cell sm:py-2 sm:px-2 text-gray-300 text-xs">
-                    <span className="sm:hidden font-semibold">ID: </span>
-                    {discount.id}
-                  </div>
-                  <div className="sm:table-cell sm:py-2 sm:px-2 text-gray-300 text-xs">
-                    <span className="sm:hidden font-semibold">Name: </span>
-                    {discount.name && typeof discount.name === 'object' ? discount.name[language] : discount.name || 'N/A'}
-                  </div>
-                  {type === 'code' && (
-                    <div className="sm:table-cell sm:py-2 sm:px-2 text-gray-300 text-xs">
-                      <span className="sm:hidden font-semibold">Code: </span>
-                      {discount.code || 'N/A'}
-                    </div>
-                  )}
-                  <div className="sm:table-cell sm:py-2 sm:px-2 text-gray-300 text-xs">
-                    <span className="sm:hidden font-semibold">Value: </span>
-                    {discount.value} %
-                  </div>
-                  <div className="sm:table-cell sm:py-2 sm:px-2 text-gray-300 text-xs">
-                    <span className="sm:hidden font-semibold">Start Date: </span>
-                    {discount.start_date}
-                  </div>
-                  <div className="sm:table-cell sm:py-2 sm:px-2 text-gray-300 text-xs">
-                    <span className="sm:hidden font-semibold">End Date: </span>
-                    {discount.end_date}
-                  </div>
-                  <div className="sm:table-cell sm:py-2 sm:px-2 text-xs">
-                    <span className="sm:hidden font-semibold">Status: </span>
-                    <span
-                      className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium ${
-                        discount.is_active ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                      }`}
+                <td className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3">
+                  {discount.value ? `${discount.value}%` : 'N/A'}
+                </td>
+                <td className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3">
+                  {discount.start_date ? new Date(discount.start_date).toLocaleDateString() : 'N/A'}
+                </td>
+                <td className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3">
+                  {discount.end_date ? new Date(discount.end_date).toLocaleDateString() : 'N/A'}
+                </td>
+                <td className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3">
+                  <span
+                    className={`px-0.5 xs:px-1 sm:px-1.5 py-0.25 xs:py-0.5 sm:py-1 rounded-full text-[8px] xs:text-[10px] sm:text-xs ${
+                      discount.is_active ? 'bg-green-600' : 'bg-red-600'
+                    }`}
+                  >
+                    {discount.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td className="px-1 xs:px-1.5 sm:px-2 md:px-3 py-1 xs:py-1.5 sm:py-2 md:py-3">
+                  <div className="flex flex-col xs:flex-row gap-0.5 xs:gap-1 sm:gap-2">
+                    <button
+                      onClick={() => onEdit(discount)}
+                      className="px-0.5 xs:px-1 sm:px-2 py-0.25 xs:py-0.5 sm:py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 text-[8px] xs:text-[10px] sm:text-xs"
                     >
-                      {discount.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onViewFoods(discount.id)}
+                      className="px-0.5 xs:px-1 sm:px-2 py-0.25 xs:py-0.5 sm:py-1 bg-yellow-600 rounded-lg hover:bg-yellow-700 text-[8px] xs:text-[10px] sm:text-xs"
+                    >
+                      Foods
+                    </button>
+                    <button
+                      onClick={() => onDelete(discount.id)}
+                      className="px-0.5 xs:px-1 sm:px-2 py-0.25 xs:py-0.5 sm:py-1 bg-red-600 rounded-lg hover:bg-red-700 text-[8px] xs:text-[10px] sm:text-xs"
+                    >
+                      Delete
+                    </button>
                   </div>
-                  <div className="sm:table-cell sm:py-2 sm:px-2 text-xs">
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                      <button
-                        onClick={() => onEdit(discount)}
-                        className="bg-indigo-600 text-white px-1 sm:px-2 py-1 rounded hover:bg-indigo-700 transition-colors duration-200 text-xs"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => onViewFoods(discount.id)}
-                        className="bg-yellow-600 text-white px-1 sm:px-2 py-1 rounded hover:bg-yellow-700 transition-colors duration-200 text-xs"
-                      >
-                        View Foods
-                      </button>
-                      <button
-                        onClick={() => onDelete(discount.id)}
-                        className="bg-red-600 text-white px-1 sm:px-2 py-1 rounded hover:bg-red-700 transition-colors duration-200 text-xs"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };

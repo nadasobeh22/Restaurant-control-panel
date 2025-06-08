@@ -39,8 +39,8 @@ const Foods = () => {
     }
 
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/admin/foods/show', {
-        headers: { 
+      const response = await axios.get('http://127.0.0.1:8000/api/admin/foods/showTranslated', {
+        headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json'
         }
@@ -111,11 +111,11 @@ const Foods = () => {
       setError(err.response?.data?.message || 'Error adding food.');
     }
   };
-
+  
   const handleUpdateFood = async (e) => {
     e.preventDefault();
     if (!token || !editingFood) return;
-
+  
     try {
       const response = await axios.patch(
         `http://127.0.0.1:8000/api/admin/foods/update/${editingFood.food_id}`,
@@ -140,7 +140,7 @@ const Foods = () => {
           }
         }
       );
-
+  
       if (response.data.status === 'success') {
         await fetchFoods();
         resetForm();
@@ -188,6 +188,7 @@ const Foods = () => {
       description: { en: '', ar: '' },
       stock: ''
     });
+    setEditingFood(null);
     setError(null);
   };
 
@@ -196,14 +197,14 @@ const Foods = () => {
     setNewFood({
       category_id: food.category_id || '',
       name: { 
-        en: food.food_name_en || food.food_name || '', 
-        ar: food.food_name_ar || food.food_name || '' 
+        en: food.food_name?.en || '', 
+        ar: food.food_name?.ar || '' 
       },
       image: null,
-      price: food.price ? food.price.replace(' $', '') : '',
+      price: food.price ? String(food.price).replace(' $', '') : '',
       description: { 
-        en: food.description_en || food.description || '', 
-        ar: food.description_ar || food.description || '' 
+        en: food.description?.en || '', 
+        ar: food.description?.ar || '' 
       },
       stock: food.stock || ''
     });
@@ -224,7 +225,7 @@ const Foods = () => {
             Foods Management
           </h1>
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => { resetForm(); setIsAddModalOpen(true); }}
             className="py-1 px-2 sm:py-2 sm:px-4 lg:px-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-md text-xs sm:text-sm lg:text-base"
           >
             Add Food
@@ -237,7 +238,6 @@ const Foods = () => {
           </div>
         )}
 
-        {/* Add Food Modal */}
         {isAddModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4">
             <div className="bg-gray-800 p-3 sm:p-5 lg:p-6 rounded-2xl shadow-2xl w-full max-w-lg sm:max-w-2xl lg:max-w-3xl max-h-[85vh] overflow-y-auto">
@@ -255,7 +255,7 @@ const Foods = () => {
                       <option value="">Select Category</option>
                       {categories.map(category => (
                         <option key={category.id} value={category.id}>
-                          {category.name?.ar || category.name}
+                          {category.name?.ar || category.name?.en || category.name}
                         </option>
                       ))}
                     </select>
@@ -317,7 +317,7 @@ const Foods = () => {
                       value={newFood.description.en}
                       onChange={(e) => setNewFood({...newFood, description: {...newFood.description, en: e.target.value}})}
                       className="w-full px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-xs sm:text-sm lg:text-base"
-                      rows="2 sm:rows-3 lg:rows-4"
+                      rows="3"
                     />
                   </div>
                   <div className="sm:col-span-2 space-y-1 sm:space-y-2">
@@ -326,17 +326,14 @@ const Foods = () => {
                       value={newFood.description.ar}
                       onChange={(e) => setNewFood({...newFood, description: {...newFood.description, ar: e.target.value}})}
                       className="w-full px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-xs sm:text-sm lg:text-base"
-                      rows="2 sm:rows-3 lg:rows-4"
+                      rows="3"
                     />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 sm:gap-3 lg:gap-4 mt-3 sm:mt-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsAddModalOpen(false);
-                      resetForm();
-                    }}
+                    onClick={() => setIsAddModalOpen(false)}
                     className="px-2 sm:px-4 lg:px-6 py-1 sm:py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200 text-xs sm:text-sm lg:text-base"
                   >
                     Cancel
@@ -353,14 +350,13 @@ const Foods = () => {
           </div>
         )}
 
-        {/* Edit Food Modal */}
         {isEditModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4">
             <div className="bg-gray-800 p-3 sm:p-5 lg:p-6 rounded-2xl shadow-2xl w-full max-w-lg sm:max-w-2xl lg:max-w-3xl max-h-[85vh] overflow-y-auto">
               <h2 className="text-base sm:text-lg lg:text-xl font-semibold mb-3 sm:mb-4 text-yellow-300">Edit Food</h2>
               <form onSubmit={handleUpdateFood} className="space-y-3 sm:space-y-4 lg:space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-                  <div className="space-y-1 sm:space-y-2">
+                <div className="space-y-1 sm:space-y-2">
                     <label className="block text-xs sm:text-sm lg:text-base font-medium text-gray-300">Category</label>
                     <select
                       value={newFood.category_id}
@@ -371,7 +367,7 @@ const Foods = () => {
                       <option value="">Select Category</option>
                       {categories.map(category => (
                         <option key={category.id} value={category.id}>
-                          {category.name?.ar || category.name}
+                          {category.name?.ar || category.name?.en || category.name}
                         </option>
                       ))}
                     </select>
@@ -432,7 +428,7 @@ const Foods = () => {
                       value={newFood.description.en}
                       onChange={(e) => setNewFood({...newFood, description: {...newFood.description, en: e.target.value}})}
                       className="w-full px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-xs sm:text-sm lg:text-base"
-                      rows="2 sm:rows-3 lg:rows-4"
+                      rows="3"
                     />
                   </div>
                   <div className="sm:col-span-2 space-y-1 sm:space-y-2">
@@ -441,17 +437,14 @@ const Foods = () => {
                       value={newFood.description.ar}
                       onChange={(e) => setNewFood({...newFood, description: {...newFood.description, ar: e.target.value}})}
                       className="w-full px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-xs sm:text-sm lg:text-base"
-                      rows="2 sm:rows-3 lg:rows-4"
+                      rows="3"
                     />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 sm:gap-3 lg:gap-4 mt-3 sm:mt-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsEditModalOpen(false);
-                      resetForm();
-                    }}
+                    onClick={() => { setIsEditModalOpen(false); resetForm(); }}
                     className="px-2 sm:px-4 lg:px-6 py-1 sm:py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200 text-xs sm:text-sm lg:text-base"
                   >
                     Cancel
@@ -468,7 +461,6 @@ const Foods = () => {
           </div>
         )}
 
-        {/* Delete Confirmation Modal */}
         {isDeleteModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4">
             <div className="bg-gray-800 p-3 sm:p-5 lg:p-6 rounded-2xl shadow-2xl w-full max-w-xs sm:max-w-sm">
@@ -492,7 +484,6 @@ const Foods = () => {
           </div>
         )}
 
-        {/* Foods Table */}
         <div className="overflow-x-auto rounded-lg shadow-lg">
           <table className="w-full bg-gray-800 text-xs sm:text-sm lg:text-base">
             <thead className="bg-indigo-600 text-white">
@@ -520,15 +511,19 @@ const Foods = () => {
                     <td className="px-1 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4">
                       <img 
                         src={`http://127.0.0.1:8000${food.image_url}`} 
-                        alt={food.food_name}
+                        alt={food.food_name?.ar || food.food_name?.en}
                         className="w-8 sm:w-12 lg:w-16 h-8 sm:h-12 lg:h-16 object-cover rounded-lg shadow"
                         onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
                       />
                     </td>
-                    <td className="px-1 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4 max-w-[80px] sm:max-w-[150px] lg:max-w-[200px] truncate">{food.food_name}</td>
+                    <td className="px-1 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4 max-w-[80px] sm:max-w-[150px] lg:max-w-[200px] truncate">
+                      {food.food_name?.ar || food.food_name?.en || food.food_name}
+                    </td>
                     <td className="px-1 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4">{food.price}</td>
                     <td className="px-1 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4">{food.stock}</td>
-                    <td className="px-1 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4 max-w-[100px] sm:max-w-[200px] lg:max-w-[300px] truncate">{food.description}</td>
+                    <td className="px-1 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4 max-w-[100px] sm:max-w-[200px] lg:max-w-[300px] truncate">
+                      {food.description?.ar || food.description?.en || food.description}
+                    </td>
                     <td className="px-1 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4">
                       <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 lg:gap-3">
                         <button

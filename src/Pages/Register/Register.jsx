@@ -36,8 +36,7 @@ const Register = () => {
       });
 
       if (response.data.status === 'success') {
-        const token = response.data.data.authorization.token;
-        localStorage.setItem('token', token);
+        localStorage.setItem('token', response.data.data.authorization.token);
         setMessage('Registration successful! Redirecting...');
         setTimeout(() => navigate('/dashboard'), 2000);
       } else {
@@ -58,83 +57,71 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-gray-900 to-indigo-900">
+    <div className="min-h-screen flex items-center justify-center bg-black px-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md p-6 sm:p-8 bg-white rounded-2xl shadow-2xl transform transition-all duration-500 hover:scale-105"
+        className="w-full max-w-md p-8 bg-transparent backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl space-y-6"
       >
-        <h2 className="text-3xl font-extrabold text-center text-indigo-600 mb-8 animate-fade-in-down">Register</h2>
+        <h2 className="text-3xl font-bold text-center text-white">
+          Admin <span className="text-orange-500">Register</span>
+        </h2>
+
         {Object.keys(errors).length > 0 && (
-          <div className="mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-800 rounded-lg animate-fade-in">
-            {Object.entries(errors).map(([field, msg], index) => (
-              <p key={index} className="text-sm">{msg}</p>
+          <div className="p-4 bg-red-900/50 border border-red-500/40 text-red-200 rounded-lg text-sm space-y-1">
+            {Object.entries(errors).map(([field, msg], i) => (
+              <p key={i}>{msg}</p>
             ))}
           </div>
         )}
+
         {message && (
-          <p className="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-800 rounded-lg animate-fade-in">
+          <div className="p-4 bg-green-900/50 border border-green-500/40 text-green-200 rounded-lg text-sm">
             {message}
-          </p>
+          </div>
         )}
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-            <input
-              type="text"
-              name="name"
-              placeholder="Enter your name"
-              value={formData.name}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300`}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300`}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 border ${errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300`}
-              required
-            />
-          </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1 bg-transparent">Name</label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Enter your name"
+            className={`w-full px-4 py-3 bg-black/40 text-white border ${errors.name ? 'border-red-500' : 'border-white/10'} rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500`}
+          />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1 bg-transparent">Email</label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="Enter your email"
+            className={`w-full px-4 py-3 bg-black/40 text-white border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500`}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1 bg-transparent">Password</label>
+          <input
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Enter your password"
+            className={`w-full px-4 py-3 bg-black/40 text-white border ${errors.password ? 'border-red-500' : 'border-white/10'} rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500`}
+          />
+        </div>
+
         <button
           type="submit"
-          className="w-full mt-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-all duration-300 focus:ring-4 focus:ring-indigo-400 focus:ring-opacity-50 disabled:opacity-60 animate-pulse-on-hover"
           disabled={isLoading}
+          className="w-full py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors focus:ring-4 focus:ring-orange-500/50 disabled:opacity-60"
         >
-          {isLoading ? (
-            <div className="flex items-center justify-center">
-              <svg
-                className="animate-spin h-5 w-5 mr-3 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-              Registering...
-            </div>
-          ) : (
-            'Register'
-          )}
+          {isLoading ? 'Registering...' : 'Register'}
         </button>
       </form>
     </div>

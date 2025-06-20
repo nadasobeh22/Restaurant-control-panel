@@ -1,478 +1,378 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Sidebar from '../../Components/Sidebar/Sidebar.jsx';
-import { useNavigate } from 'react-router-dom';
-import { FaSignOutAlt } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
 
 const EmployeesManagement = () => {
-  const [employees, setEmployees] = useState([]);
-  const [newEmployee, setNewEmployee] = useState({
-    name: '',
-    phone: '',
-    position: '',
-    salary: '',
-    hire_date: '',
-  });
-  const [editingEmployee, setEditingEmployee] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [generalError, setGeneralError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [employeeToDelete, setEmployeeToDelete] = useState(null);
-  const token = localStorage.getItem('token');
-  const navigate = useNavigate();
+    const [employees, setEmployees] = useState([]);
+    const [newEmployee, setNewEmployee] = useState({
+        name: '',
+        phone: '',
+        position: '',
+        salary: '',
+        hire_date: '',
+    });
+    const [editingEmployee, setEditingEmployee] = useState(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [employeeToDelete, setEmployeeToDelete] = useState(null);
+    const [formErrors, setFormErrors] = useState({});
+    const [generalError, setGeneralError] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const token = localStorage.getItem('token');
+    const API_BASE_URL = 'http://127.0.0.1:8000/api/admin';
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
+    const fetchEmployees = useCallback(async ( ) => {
+        if (!token) return;
+        try {
+            const response = await axios.get(`${API_BASE_URL}/employees/show`, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+            setEmployees(response.data.data || []);
+        } catch (error) {
+            setGeneralError(error.response?.data?.message || 'Failed to fetch employees');
+        }
+    }, [token]);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+    useEffect(() => {
+        fetchEmployees();
+    }, [fetchEmployees]);
 
-  const fetchEmployees = async () => {
-    if (!token) {
-      setGeneralError('Please log in first. No token found in localStorage.');
-      return;
-    }
+    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    try {
-      const response = await axios.get('http://127.0.0.1:8000/api/admin/employees/show', {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      });
-
-      if (response.data.status === 'success') {
-        setEmployees(response.data.data);
-        setGeneralError(null);
-      } else {
-        setGeneralError(response.data.message || 'Failed to fetch employees');
-      }
-    } catch (err) {
-      setGeneralError(err.response?.data?.message || 'Server connection error');
-    }
-  };
-
-  const handleAddOrUpdateEmployee = async (e, isEdit = false) => {
-    e.preventDefault();
-    if (!token) {
-      setGeneralError('Please log in first. No token found in localStorage.');
-      return;
-    }
-
-    const url = isEdit
-      ? `http://127.0.0.1:8000/api/admin/employees/update/${editingEmployee.id}`
-      : 'http://127.0.0.1:8000/api/admin/employees/add';
-    const method = isEdit ? 'patch' : 'post';
-
-    try {
-      const response = await axios({
-        method,
-        url,
-        data: newEmployee,
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-      });
-
-      if (response.data.status === 'success') {
-        await fetchEmployees();
+    const resetForm = () => {
         setNewEmployee({ name: '', phone: '', position: '', salary: '', hire_date: '' });
         setEditingEmployee(null);
-        setIsAddModalOpen(false);
-        setIsEditModalOpen(false);
-        setErrors({});
+        setFormErrors({});
         setGeneralError(null);
-        setSuccessMessage(response.data.message || (isEdit ? 'Employee updated successfully' : 'Employee added successfully'));
-        setTimeout(() => setSuccessMessage(null), 3000);
-      } else {
-        setGeneralError(response.data.message || 'Failed to save employee');
-      }
-    } catch (err) {
-      const errorResponse = err.response?.data;
-      if (errorResponse?.errors) {
-        setErrors(errorResponse.errors); // تعيين الأخطاء التفصيلية كما هي من الـ API
-      } else {
-        setGeneralError(errorResponse?.message || 'Server connection error');
-      }
-    }
-  };
+    };
 
-  const handleEditEmployee = (employee) => {
-    setEditingEmployee(employee);
-    setNewEmployee({
-      name: employee.name,
-      phone: employee.phone,
-      position: employee.position,
-      salary: employee.salary,
-      hire_date: employee.hire_date,
-    });
-    setIsEditModalOpen(true);
-    setErrors({});
-  };
-
-  const handleDeleteEmployee = async () => {
-    if (!token) {
-      setGeneralError('Please log in first. No token found in localStorage.');
-      return;
-    }
-
-    try {
-      const response = await axios.delete(
-        `http://127.0.0.1:8000/api/admin/employees/delete/${employeeToDelete}`,
-        {
-          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    const handleError = (error) => {
+        const errors = error.response?.data?.errors;
+        if (errors) {
+            const flatErrors = {};
+            Object.keys(errors).forEach(key => { flatErrors[key] = errors[key][0]; });
+            setFormErrors(flatErrors);
+        } else {
+            setGeneralError(error.response?.data?.message || 'An unexpected error occurred.');
         }
-      );
+    };
 
-      if (response.data.status === 'success') {
-        setEmployees(employees.filter((emp) => emp.id !== employeeToDelete));
+    const handleAddEmployee = async (e) => {
+        e.preventDefault();
+        setFormErrors({});
         setGeneralError(null);
-        setSuccessMessage(response.data.message || 'Employee deleted successfully');
-        setTimeout(() => setSuccessMessage(null), 3000);
-        setIsDeleteModalOpen(false);
-        setEmployeeToDelete(null);
-      } else {
-        setGeneralError(response.data.message || 'Failed to delete employee');
-      }
-    } catch (err) {
-      setGeneralError(err.response?.data?.message || 'Server connection error');
-      setIsDeleteModalOpen(false);
-    }
-  };
+        try {
+            await axios.post(`${API_BASE_URL}/employees/add`, newEmployee, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+            fetchEmployees();
+            setIsAddModalOpen(false);
+            resetForm();
+        } catch (error) {
+            handleError(error);
+        }
+    };
 
-  const confirmDeleteEmployee = (id) => {
-    setEmployeeToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
+    const handleUpdateEmployee = async (e) => {
+        e.preventDefault();
+        if (!editingEmployee) return;
+        setFormErrors({});
+        setGeneralError(null);
+        try {
+            await axios.patch(`${API_BASE_URL}/employees/update/${editingEmployee.id}`, newEmployee, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+            fetchEmployees();
+            setIsEditModalOpen(false);
+            resetForm();
+        } catch (error) {
+            handleError(error);
+        }
+    };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/');
-  };
+    const handleDeleteEmployee = async () => {
+        if (!employeeToDelete) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/employees/delete/${employeeToDelete}`, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+            fetchEmployees();
+            setIsDeleteModalOpen(false);
+            setEmployeeToDelete(null);
+        } catch (error) {
+            setGeneralError(error.response?.data?.message || 'Failed to delete employee');
+        }
+    };
 
-  return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-900 to-indigo-900 text-white">
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      <div className="flex-1 p-4 lg:p-6 lg:ml-64">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-center text-yellow-300">Employees Management</h1>
-          <button
-            onClick={handleLogout}
-            className="mt-4 sm:mt-0 flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-all duration-200"
-          >
-            <FaSignOutAlt size={16} />
-            Logout
-          </button>
-        </div>
+    const openEditModal = (employee) => {
+        resetForm();
+        setEditingEmployee(employee);
+        setNewEmployee({
+            name: employee.name || '',
+            phone: employee.phone || '',
+            position: employee.position || '',
+            salary: employee.salary || '',
+            hire_date: employee.hire_date || '',
+        });
+        setIsEditModalOpen(true);
+    };
 
-        {generalError && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
-            {generalError}
-          </div>
-        )}
+    const openDeleteModal = (id) => {
+        setEmployeeToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
 
-        {successMessage && (
-          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-center">
-            {successMessage}
-          </div>
-        )}
-
-        <div className="mb-8">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200"
-          >
-            Add Employee
-          </button>
-        </div>
-
-        {isAddModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 p-6 rounded-2xl shadow-lg max-w-lg w-full">
-              <h2 className="text-lg md:text-xl font-semibold mb-4 text-yellow-300">Add Employee</h2>
-              <form onSubmit={handleAddOrUpdateEmployee} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={newEmployee.name}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.name ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  />
-                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name[0]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
-                  <input
-                    type="text"
-                    value={newEmployee.phone}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.phone ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  />
-                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone[0]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Position</label>
-                  <select
-                    value={newEmployee.position}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, position: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.position ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  >
+    const renderFormFields = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
+                <input 
+                    type="text" 
+                    value={newEmployee.name} 
+                    onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })} 
+                    required 
+                    className={`w-full px-4 py-2 bg-gray-800 border ${formErrors.name ? 'border-red-500' : 'border-gray-700'} rounded-lg focus:ring-2 focus:ring-orange-500`} 
+                />
+                {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
+                <input 
+                    type="text" 
+                    value={newEmployee.phone} 
+                    onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })} 
+                    required 
+                    className={`w-full px-4 py-2 bg-gray-800 border ${formErrors.phone ? 'border-red-500' : 'border-gray-700'} rounded-lg focus:ring-2 focus:ring-orange-500`} 
+                />
+                {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Position</label>
+                <select 
+                    value={newEmployee.position} 
+                    onChange={(e) => setNewEmployee({ ...newEmployee, position: e.target.value })} 
+                    required 
+                    className={`w-full px-4 py-2 bg-gray-800 border ${formErrors.position ? 'border-red-500' : 'border-gray-700'} rounded-lg focus:ring-2 focus:ring-orange-500`}
+                >
                     <option value="">Select Position</option>
                     <option value="Chef">Chef</option>
                     <option value="Waiter">Waiter</option>
                     <option value="Cashier">Cashier</option>
-                  </select>
-                  {errors.position && <p className="text-red-500 text-sm mt-1">{errors.position[0]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Salary</label>
-                  <input
-                    type="number"
-                    value={newEmployee.salary}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, salary: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.salary ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  />
-                  {errors.salary && <p className="text-red-500 text-sm mt-1">{errors.salary[0]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Hire Date</label>
-                  <input
-                    type="date"
-                    value={newEmployee.hire_date}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, hire_date: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.hire_date ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  />
-                  {errors.hire_date && <p className="text-red-500 text-sm mt-1">{errors.hire_date[0]}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200"
-                  >
-                    Add
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddModalOpen(false);
-                      setNewEmployee({ name: '', phone: '', position: '', salary: '', hire_date: '' });
-                      setErrors({});
-                    }}
-                    className="flex-1 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+                </select>
+                {formErrors.position && <p className="text-red-500 text-sm mt-1">{formErrors.position}</p>}
             </div>
-          </div>
-        )}
-
-        {isEditModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 p-6 rounded-2xl shadow-lg max-w-lg w-full">
-              <h2 className="text-lg md:text-xl font-semibold mb-4 text-yellow-300">Edit Employee</h2>
-              <form onSubmit={(e) => handleAddOrUpdateEmployee(e, true)} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={newEmployee.name}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.name ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  />
-                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name[0]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
-                  <input
-                    type="text"
-                    value={newEmployee.phone}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.phone ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  />
-                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone[0]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Position</label>
-                  <select
-                    value={newEmployee.position}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, position: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.position ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  >
-                    <option value="">Select Position</option>
-                    <option value="Chef">Chef</option>
-                    <option value="Waiter">Waiter</option>
-                    <option value="Cashier">Cashier</option>
-                  </select>
-                  {errors.position && <p className="text-red-500 text-sm mt-1">{errors.position[0]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Salary</label>
-                  <input
-                    type="number"
-                    value={newEmployee.salary}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, salary: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.salary ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  />
-                  {errors.salary && <p className="text-red-500 text-sm mt-1">{errors.salary[0]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Hire Date</label>
-                  <input
-                    type="date"
-                    value={newEmployee.hire_date}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, hire_date: e.target.value })}
-                    className={`w-full px-4 py-2 bg-gray-700 border ${errors.hire_date ? 'border-red-500' : 'border-gray-600'} rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
-                    required
-                  />
-                  {errors.hire_date && <p className="text-red-500 text-sm mt-1">{errors.hire_date[0]}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200"
-                  >
-                    Update
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditModalOpen(false);
-                      setNewEmployee({ name: '', phone: '', position: '', salary: '', hire_date: '' });
-                      setEditingEmployee(null);
-                      setErrors({});
-                    }}
-                    className="flex-1 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+            <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Salary</label>
+                <input 
+                    type="number" 
+                    value={newEmployee.salary} 
+                    onChange={(e) => setNewEmployee({ ...newEmployee, salary: e.target.value })} 
+                    required 
+                    min="0" 
+                    step="0.01" 
+                    className={`w-full px-4 py-2 bg-gray-800 border ${formErrors.salary ? 'border-red-500' : 'border-gray-700'} rounded-lg focus:ring-2 focus:ring-orange-500`} 
+                />
+                {formErrors.salary && <p className="text-red-500 text-sm mt-1">{formErrors.salary}</p>}
             </div>
-          </div>
-        )}
-
-        {isDeleteModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 p-6 rounded-2xl shadow-lg max-w-sm w-full">
-              <h2 className="text-lg font-semibold mb-4 text-yellow-300">Confirm Deletion</h2>
-              <p className="text-gray-300 mb-4">Are you sure you want to delete this employee?</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleDeleteEmployee}
-                  className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200"
-                >
-                  Yes, Delete
-                </button>
-                <button
-                  onClick={() => {
-                    setIsDeleteModalOpen(false);
-                    setEmployeeToDelete(null);
-                  }}
-                  className="flex-1 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-              </div>
+            <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-1">Hire Date</label>
+                <input 
+                    type="date" 
+                    value={newEmployee.hire_date} 
+                    onChange={(e) => setNewEmployee({ ...newEmployee, hire_date: e.target.value })} 
+                    required 
+                    className={`w-full px-4 py-2 bg-gray-800 border ${formErrors.hire_date ? 'border-red-500' : 'border-gray-700'} rounded-lg focus:ring-2 focus:ring-orange-500`} 
+                />
+                {formErrors.hire_date && <p className="text-red-500 text-sm mt-1">{formErrors.hire_date}</p>}
             </div>
-          </div>
-        )}
+        </div>
+    );
 
-        <div className="overflow-x-auto md:overflow-x-hidden">
-          <div className="hidden md:block">
-            <table className="min-w-full bg-gray-800 rounded-2xl shadow-lg table-auto">
-              <thead className="bg-indigo-600 text-white">
-                <tr>
-                  <th className="py-3 px-4 text-left text-sm font-semibold min-w-[60px]">ID</th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold min-w-[120px]">Name</th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold min-w-[120px]">Phone</th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold min-w-[100px]">Salary</th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold min-w-[120px]">Hire Date</th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold min-w-[100px]">Position</th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold min-w-[140px]">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-3 px-4 text-center text-gray-400">No employees available</td>
-                  </tr>
-                ) : (
-                  employees.map((employee) => (
-                    <tr key={employee.id} className="hover:bg-gray-700 transition-all duration-200">
-                      <td className="py-2 px-4 text-gray-300 truncate">{employee.id}</td>
-                      <td className="py-2 px-4 text-gray-300 truncate">{employee.name}</td>
-                      <td className="py-2 px-4 text-gray-300 truncate">{employee.phone}</td>
-                      <td className="py-2 px-4 text-gray-300 truncate">{employee.salary}</td>
-                      <td className="py-2 px-4 text-gray-300 truncate">{employee.hire_date}</td>
-                      <td className="py-2 px-4 text-gray-300 truncate">{employee.position}</td>
-                      <td className="py-2 px-4 flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => handleEditEmployee(employee)}
-                          className="py-1 px-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all duration-200 text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => confirmDeleteEmployee(employee.id)}
-                          className="py-1 px-3 bg-red-600 text-white rounded hover:bg-red-700 transition-all duration-200 text-sm"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+    return (
+        <div className="flex min-h-screen bg-black text-white">
+            <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+            <div className="flex-1 p-4 sm:p-6 lg:p-8 md:pl-20 lg:pl-8 transition-all duration-300 lg:ml-64">
+                <header className="mb-8 text-center">
+                    <h1 className="text-xl md:text-4xl font-bold">Employees <span className="text-orange-500">Management</span></h1>
+                    <p className="text-xs md:text-base text-gray-400 mt-2">Manage restaurant employees and their information.</p>
+                </header>
+
+                <div className="mb-6 flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                    <button 
+                        onClick={() => { resetForm(); setIsAddModalOpen(true); }} 
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                    >
+                        <FaPlus size={14} /> Add New Employee
+                    </button>
+                </div>
+                
+                {generalError && <div className="mb-4 p-3 bg-red-900/50 border-l-4 border-red-500 text-red-200 rounded-lg text-center" onClick={()=>setGeneralError(null)}>{generalError}</div>}
+
+                {/* Desktop Table with Vertical Scroll */}
+                <div className="hidden md:block bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 shadow-lg">
+                    <div className="overflow-x-auto overflow-y-auto max-h-96 rounded-xl">
+                        <table className="min-w-full">
+                            <thead className="bg-white/10 sticky top-0 z-10">
+                                <tr>
+                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase">ID</th>
+                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase">Name</th>
+                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase">Phone</th>
+                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase">Position</th>
+                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase">Salary</th>
+                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase">Hire Date</th>
+                                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-400 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-800">
+                                {employees.map(emp => (
+                                    <tr key={emp.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="py-3 px-4 text-sm text-gray-300">{emp.id}</td>
+                                        <td className="py-3 px-4 text-sm text-white">{emp.name || 'N/A'}</td>
+                                        <td className="py-3 px-4 text-sm text-gray-300">{emp.phone || 'N/A'}</td>
+                                        <td className="py-3 px-4 text-sm text-orange-400">{emp.position || 'N/A'}</td>
+                                        <td className="py-3 px-4 text-sm text-green-400">${emp.salary || '0'}</td>
+                                        <td className="py-3 px-4 text-sm text-gray-300">{emp.hire_date || 'N/A'}</td>
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center gap-3">
+                                                <button onClick={() => openEditModal(emp)} className="p-1 text-gray-400 hover:text-orange-500 transition-colors">
+                                                    <FaEdit size={14} />
+                                                </button>
+                                                <button onClick={() => openDeleteModal(emp.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                                                    <FaTrash size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Mobile Cards with Vertical Scroll */}
+                <div className="md:hidden space-y-4 max-h-96 overflow-y-auto">
+                    {employees.map(emp => (
+                        <div key={emp.id} className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4">
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <h3 className="text-white font-medium">{emp.name || 'N/A'}</h3>
+                                    <p className="text-gray-400 text-sm">ID: {emp.id}</p>
+                                </div>
+                                <span className="px-2 py-1 text-xs rounded-full bg-orange-900/50 text-orange-300">
+                                    {emp.position || 'N/A'}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                                <div>
+                                    <span className="text-gray-400">Phone:</span>
+                                    <span className="text-gray-300 ml-1">{emp.phone || 'N/A'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-400">Salary:</span>
+                                    <span className="text-green-400 ml-1">${emp.salary || '0'}</span>
+                                </div>
+                                <div className="col-span-2">
+                                    <span className="text-gray-400">Hire Date:</span>
+                                    <span className="text-gray-300 ml-1">{emp.hire_date || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => openEditModal(emp)} className="p-2 text-gray-400 hover:text-orange-500 transition-colors">
+                                    <FaEdit size={16} />
+                                </button>
+                                <button onClick={() => openDeleteModal(emp.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                                    <FaTrash size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Add Employee Modal */}
+                {isAddModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-gray-900 rounded-xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-white">Add New Employee</h2>
+                                    <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                                        <FaTimes size={20} />
+                                    </button>
+                                </div>
+                                {generalError && <div className="mb-4 p-3 bg-red-900/50 border-l-4 border-red-500 text-red-200 rounded-lg">{generalError}</div>}
+                                <form onSubmit={handleAddEmployee}>
+                                    {renderFormFields()}
+                                    <div className="flex justify-end gap-3 mt-6">
+                                        <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                                            Add Employee
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 )}
-              </tbody>
-            </table>
-          </div>
 
-          <div className="block md:hidden space-y-4">
-            {employees.length === 0 ? (
-              <p className="text-center text-gray-400">No employees available</p>
-            ) : (
-              employees.map((employee) => (
-                <div key={employee.id} className="p-4 bg-gray-700 rounded-lg shadow-lg">
-                  <div className="space-y-2">
-                    <p className="text-gray-300 text-sm"><strong>ID:</strong> {employee.id}</p>
-                    <p className="text-gray-300 text-sm"><strong>Name:</strong> {employee.name}</p>
-                    <p className="text-gray-300 text-sm"><strong>Phone:</strong> {employee.phone}</p>
-                    <p className="text-gray-300 text-sm"><strong>Salary:</strong> {employee.salary}</p>
-                    <p className="text-gray-300 text-sm"><strong>Hire Date:</strong> {employee.hire_date}</p>
-                    <p className="text-gray-300 text-sm"><strong>Position:</strong> {employee.position}</p>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => handleEditEmployee(employee)}
-                      className="flex-1 py-1 px-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all duration-200 text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => confirmDeleteEmployee(employee.id)}
-                      className="flex-1 py-1 px-3 bg-red-600 text-white rounded hover:bg-red-700 transition-all duration-200 text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                {/* Edit Employee Modal */}
+                {isEditModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-gray-900 rounded-xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-white">Edit Employee</h2>
+                                    <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                                        <FaTimes size={20} />
+                                    </button>
+                                </div>
+                                {generalError && <div className="mb-4 p-3 bg-red-900/50 border-l-4 border-red-500 text-red-200 rounded-lg">{generalError}</div>}
+                                <form onSubmit={handleUpdateEmployee}>
+                                    {renderFormFields()}
+                                    <div className="flex justify-end gap-3 mt-6">
+                                        <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                                            Update Employee
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete Confirmation Modal */}
+                {isDeleteModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-gray-900 rounded-xl border border-white/10 w-full max-w-md">
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold text-white">Confirm Delete</h2>
+                                    <button onClick={() => setIsDeleteModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                                        <FaTimes size={20} />
+                                    </button>
+                                </div>
+                                <p className="text-gray-300 mb-6">Are you sure you want to delete this employee? This action cannot be undone.</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setIsDeleteModalOpen(false)} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                                        Cancel
+                                    </button>
+                                    <button onClick={handleDeleteEmployee} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default EmployeesManagement;

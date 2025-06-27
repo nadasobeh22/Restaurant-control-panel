@@ -7,7 +7,7 @@ import { FaPlus, FaEdit, FaTrash, FaChevronLeft, FaChevronRight } from 'react-ic
 const Foods = () => {
     const [foods, setFoods] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [paginationMeta, setPaginationMeta] = useState(null);
+    const [paginationMeta, setPaginationMeta] = useState(null); // Pagination state re-added
     const [newFood, setNewFood] = useState({
         category_id: '', name: { en: '', ar: '' }, image: null,
         price: '', description: { en: '', ar: '' }, stock: ''
@@ -32,31 +32,36 @@ const Foods = () => {
         setFormErrors({});
         setGeneralError(null);
     }, []);
-    
+
+    // --- MODIFIED: fetchFoods to handle the new paginated response ---
     const fetchFoods = useCallback(async (page = 1) => {
         if (!token) {
             navigate('/');
             return;
         }
         try {
-            const url = `http://127.0.0.1:8000/api/admin/foods/show?page=${page}`;
+            // URL updated for the paginated endpoint
+            const url = `http://127.0.0.1:8000/api/admin/foods/showTranslated?page=${page}`;
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
             });
+
+            // Expecting { data: [...], meta: {...} } structure
             if (response.data && response.data.data) {
+                // Map API response to a consistent internal data structure
                 const mappedFoods = response.data.data.map(food => ({
                     ...food,
                     name: {
-                        en: food.food_name,
-                        ar: food.translations?.ar?.food_name || ''
+                        en: food.food_name, // English name from API
+                        ar: food.translations?.ar?.food_name || '' // Arabic name (or empty string)
                     },
                     description: {
-                        en: food.description,
-                        ar: food.translations?.ar?.description || ''
+                        en: food.description, // English description from API
+                        ar: food.translations?.ar?.description || '' // Arabic description (or empty string)
                     }
                 }));
                 setFoods(mappedFoods);
-                setPaginationMeta(response.data.meta);
+                setPaginationMeta(response.data.meta); // Set pagination data
             }
         } catch (err) {
             setGeneralError(err.response?.data?.message || 'Error fetching foods.');
@@ -97,7 +102,7 @@ const Foods = () => {
             setGeneralError(err.response?.data?.message || 'An unexpected error occurred.');
         }
     };
-    
+
     const handleAddFood = async (e) => {
         e.preventDefault();
         setGeneralError(null);
@@ -117,7 +122,7 @@ const Foods = () => {
             await axios.post('http://127.0.0.1:8000/api/admin/foods/add', formData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            await fetchFoods(1);
+            await fetchFoods(1); // Refetch from page 1
             setIsAddModalOpen(false);
             resetForm();
         } catch (err) {
@@ -148,6 +153,7 @@ const Foods = () => {
             await axios.post(`http://127.0.0.1:8000/api/admin/foods/update/${editingFood.food_id}`, formData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            // Refetch the current page to see the changes
             await fetchFoods(paginationMeta?.current_page || 1);
             setIsEditModalOpen(false);
             resetForm();
@@ -162,6 +168,7 @@ const Foods = () => {
             await axios.delete(`http://127.0.0.1:8000/api/admin/foods/delete/${foodToDelete}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            // Refetch the current page
             await fetchFoods(paginationMeta?.current_page || 1);
             setIsDeleteModalOpen(false);
             setFoodToDelete(null);
@@ -170,28 +177,30 @@ const Foods = () => {
             setIsDeleteModalOpen(false);
         }
     };
-
+    
+    // --- Re-added: handlePageChange for pagination ---
     const handlePageChange = (page) => {
         if (page && paginationMeta && page >= 1 && page <= paginationMeta.last_page) {
             fetchFoods(page);
         }
     };
     
+    // --- MODIFIED: openEditModal to work with the normalized data ---
     const openEditModal = (food) => {
         resetForm();
         setEditingFood(food);
         
         setNewFood({
             category_id: food.category_id || '',
-            name: { 
-                en: food.food_name || '', 
-                ar: food.name?.ar || '' 
+            name: {
+                en: food.name?.en || '', // Use the mapped name object
+                ar: food.name?.ar || ''
             },
             image: null,
             price: food.price ? String(food.price).replace(' $', '') : '',
-            description: { 
-                en: food.description.en || '', // Use the already mapped description
-                ar: food.description.ar || '' 
+            description: {
+                en: food.description?.en || '', // Use the mapped description object
+                ar: food.description?.ar || ''
             },
             stock: food.stock || ''
         });
@@ -214,6 +223,7 @@ const Foods = () => {
                 <h2 className="text-xl font-semibold mb-6 text-orange-500">{isEditing ? 'Edit Food' : 'Add New Food'}</h2>
                 {generalError && <div className="mb-4 p-3 bg-red-900/50 border-l-4 border-red-500 text-red-200 rounded-lg text-center" onClick={() => setGeneralError(null)}>{generalError}</div>}
                 <form onSubmit={isEditing ? handleUpdateFood : handleAddFood} className="space-y-5">
+                    {/* Form fields remain the same */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">Category</label>
@@ -228,34 +238,34 @@ const Foods = () => {
                             <input type="text" value={newFood.name.en} onChange={(e) => setNewFood({ ...newFood, name: { ...newFood.name, en: e.target.value } })} className={`w-full px-4 py-2 bg-gray-800 border ${formErrors['name.en'] ? 'border-red-500' : 'border-gray-700'} rounded-lg text-white focus:ring-2 focus:ring-orange-500`} required/>
                             {formErrors['name.en'] && <p className="text-red-500 text-sm mt-1">{formErrors['name.en']}</p>}
                         </div>
-                         <div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">Name (AR)</label>
                             <input type="text" value={newFood.name.ar} onChange={(e) => setNewFood({ ...newFood, name: { ...newFood.name, ar: e.target.value } })} className={`w-full px-4 py-2 bg-gray-800 border ${formErrors['name.ar'] ? 'border-red-500' : 'border-gray-700'} rounded-lg text-white focus:ring-2 focus:ring-orange-500`} required/>
                             {formErrors['name.ar'] && <p className="text-red-500 text-sm mt-1">{formErrors['name.ar']}</p>}
                         </div>
-                         <div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">Price</label>
                             <input type="number" step="0.01" value={newFood.price} onChange={(e) => setNewFood({ ...newFood, price: e.target.value })} className={`w-full px-4 py-2 bg-gray-800 border ${formErrors.price ? 'border-red-500' : 'border-gray-700'} rounded-lg text-white focus:ring-2 focus:ring-orange-500`} required/>
                             {formErrors.price && <p className="text-red-500 text-sm mt-1">{formErrors.price}</p>}
                         </div>
-                         <div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">Stock</label>
                             <input type="number" value={newFood.stock} onChange={(e) => setNewFood({ ...newFood, stock: e.target.value })} className={`w-full px-4 py-2 bg-gray-800 border ${formErrors.stock ? 'border-red-500' : 'border-gray-700'} rounded-lg text-white focus:ring-2 focus:ring-orange-500`} required/>
-                             {formErrors.stock && <p className="text-red-500 text-sm mt-1">{formErrors.stock}</p>}
+                            {formErrors.stock && <p className="text-red-500 text-sm mt-1">{formErrors.stock}</p>}
                         </div>
-                         <div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">Image {isEditing && "(Leave blank to keep current)"}</label>
                             <input type="file" onChange={(e) => setNewFood({ ...newFood, image: e.target.files[0] })} className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-700"/>
-                             {formErrors.image && <p className="text-red-500 text-sm mt-1">{formErrors.image}</p>}
+                            {formErrors.image && <p className="text-red-500 text-sm mt-1">{formErrors.image}</p>}
                         </div>
                         <div className="md:col-span-2">
-                             <label className="block text-sm font-medium text-gray-300 mb-1">Description (EN)</label>
-                             <textarea value={newFood.description.en} onChange={(e) => setNewFood({...newFood, description: {...newFood.description, en: e.target.value}})} rows="3" className={`w-full px-4 py-2 bg-gray-800 border ${formErrors['description.en'] ? 'border-red-500' : 'border-gray-700'} rounded-lg text-white focus:ring-2 focus:ring-orange-500`}></textarea>
-                              {formErrors['description.en'] && <p className="text-red-500 text-sm mt-1">{formErrors['description.en']}</p>}
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Description (EN)</label>
+                            <textarea value={newFood.description.en} onChange={(e) => setNewFood({...newFood, description: {...newFood.description, en: e.target.value}})} rows="3" className={`w-full px-4 py-2 bg-gray-800 border ${formErrors['description.en'] ? 'border-red-500' : 'border-gray-700'} rounded-lg text-white focus:ring-2 focus:ring-orange-500`}></textarea>
+                            {formErrors['description.en'] && <p className="text-red-500 text-sm mt-1">{formErrors['description.en']}</p>}
                         </div>
-                         <div className="md:col-span-2">
-                             <label className="block text-sm font-medium text-gray-300 mb-1">Description (AR)</label>
-                             <textarea value={newFood.description.ar} onChange={(e) => setNewFood({...newFood, description: {...newFood.description, ar: e.target.value}})} rows="3" className={`w-full px-4 py-2 bg-gray-800 border ${formErrors['description.ar'] ? 'border-red-500' : 'border-gray-700'} rounded-lg text-white focus:ring-2 focus:ring-orange-500`}></textarea>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Description (AR)</label>
+                            <textarea value={newFood.description.ar} onChange={(e) => setNewFood({...newFood, description: {...newFood.description, ar: e.target.value}})} rows="3" className={`w-full px-4 py-2 bg-gray-800 border ${formErrors['description.ar'] ? 'border-red-500' : 'border-gray-700'} rounded-lg text-white focus:ring-2 focus:ring-orange-500`}></textarea>
                             {formErrors['description.ar'] && <p className="text-red-500 text-sm mt-1">{formErrors['description.ar']}</p>}
                         </div>
                     </div>
@@ -267,11 +277,11 @@ const Foods = () => {
             </div>
         </div>
     );
-    
+
     return (
         <div className="flex h-screen bg-black text-white overflow-hidden">
             <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-            
+
             <div className="flex-1 flex flex-col transition-all duration-300 lg:ml-64 md:pl-20 lg:pl-8">
                 {/* --- 1. Fixed Header Area --- */}
                 <div className="p-4 sm:p-6 lg:p-8 pb-4">
@@ -300,7 +310,7 @@ const Foods = () => {
                         </div>
                     </div>
                 )}
-                
+
                 {/* --- 2. Scrollable Content Area --- */}
                 <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-8">
                     <div className="hidden md:block bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 shadow-lg">
@@ -315,6 +325,7 @@ const Foods = () => {
                                     {foods.map(food => (
                                         <tr key={food.food_id} className="hover:bg-white/5">
                                             <td className="py-3 px-4 text-gray-300">{food.food_id}</td>
+                                            {/* --- MODIFIED: Image src prepends base URL --- */}
                                             <td className="py-3 px-4"><img src={`http://127.0.0.1:8000${food.image_url}`} alt={food.name.en} className="w-12 h-12 object-cover rounded-md"/></td>
                                             <td className="py-3 px-4 text-gray-300">{food.name.en}</td>
                                             <td className="py-3 px-4 text-gray-300">{food.price}</td>
@@ -354,27 +365,28 @@ const Foods = () => {
                         ))}
                     </div>
                     
+                    {/* --- Re-added: Pagination controls --- */}
                     {paginationMeta && paginationMeta.last_page > 1 && (
                         <div className="flex justify-center items-center mt-8 space-x-2 flex-wrap">
-                            <button 
-                                onClick={() => handlePageChange(paginationMeta.current_page - 1)} 
-                                disabled={!paginationMeta.prev_page_url} 
+                            <button
+                                onClick={() => handlePageChange(paginationMeta.current_page - 1)}
+                                disabled={!paginationMeta.links[0].url}
                                 className="p-2 disabled:opacity-50 hover:bg-neutral-800 rounded-full transition-colors"
                             >
                                 <FaChevronLeft />
                             </button>
                             {paginationMeta.links.slice(1, -1).map(link => (
-                                <button 
-                                    key={link.label} 
-                                    onClick={() => handlePageChange(Number(link.label))} 
+                                <button
+                                    key={link.label}
+                                    onClick={() => handlePageChange(Number(link.label))}
                                     className={`px-4 py-2 rounded-lg text-sm transition-colors ${link.active ? 'bg-orange-600 font-bold' : 'bg-neutral-800 hover:bg-neutral-700'}`}
                                 >
                                     {link.label}
                                 </button>
                             ))}
-                            <button 
-                                onClick={() => handlePageChange(paginationMeta.current_page + 1)} 
-                                disabled={!paginationMeta.next_page_url} 
+                            <button
+                                onClick={() => handlePageChange(paginationMeta.current_page + 1)}
+                                disabled={!paginationMeta.links[paginationMeta.links.length - 1].url}
                                 className="p-2 disabled:opacity-50 hover:bg-neutral-800 rounded-full transition-colors"
                             >
                                 <FaChevronRight />
